@@ -1,0 +1,15 @@
+SAJaS - Simple API for JADE-based Simulations
+=============================================
+
+This is the change-log for SAJaS.
+
+
+v0.91b, 2015-Oct-20
+-------------------
+- Solved bug with incorrect use of sajas.core.AID in some migrated JADE classes.
+- Updated documentation on sajas.core.AID, which should be used by programmers only when explicitly instantiating this class.
+
+
+v0.9b, 2015-Sep-1
+-----------------
+First version of SAJaS.
