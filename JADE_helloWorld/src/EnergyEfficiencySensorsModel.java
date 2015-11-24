@@ -7,6 +7,7 @@ import sajas.sim.repast3.Repast3Launcher;
 
 import uchicago.src.reflector.ListPropertyDescriptor;
 import uchicago.src.sim.analysis.OpenSequenceGraph;
+import uchicago.src.sim.analysis.Sequence;
 import uchicago.src.sim.engine.SimInit;
 import uchicago.src.sim.gui.DisplaySurface;
 import uchicago.src.sim.gui.Object2DDisplay;
@@ -52,6 +53,12 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	}
 
 	@Override
+	public void begin(){
+		super.begin();
+		buildDisplay();
+	}
+
+	@Override
 	public String[] getInitParam() {
 		return new String[] { "numberOfAgents", "energyLossPerTick",  "allowGroupsFormation", "nearAgents" } ;
 	}
@@ -79,6 +86,23 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		//
 		// });
 		plot.display();
+
+		if (plot2 != null) plot2.dispose();
+		plot2 = new OpenSequenceGraph("Groups and Agents Evolution Curves", this);
+		plot2.setAxisTitles("time", "n");
+		//TODO: desenhar o gráficos
+		plot.addSequence("Numero de agentes ativos",  new Sequence(){
+			public double getSValue(){ return getActiveAgents();}
+		 });
+	}
+
+	private int getActiveAgents() {
+		int sum = 0;
+		for (int i = 0; i < agentList.size(); i++){
+			if (agentList.get(i).isActive())
+				sum++;
+		}
+		return sum;
 	}
 
 	protected void launchJADE() {

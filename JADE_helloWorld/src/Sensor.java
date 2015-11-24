@@ -8,6 +8,16 @@ public class Sensor extends sajas.core.Agent {
     private float energy; //percent value
     private int coordX, coordY;
     private boolean isLeader;
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
+    }
+
+    private boolean isActive;
     private Object2DTorus space;
 
     public Sensor(int personal_id, int coordX, int coordY, Object2DTorus space) {
@@ -17,6 +27,7 @@ public class Sensor extends sajas.core.Agent {
         this.space = space;
         this.isLeader = true;
         this.energy = 100;
+        isActive = false;
     }
 
     protected void setup() {
