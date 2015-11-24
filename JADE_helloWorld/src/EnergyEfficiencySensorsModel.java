@@ -23,6 +23,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	private DisplaySurface dsurf;
 	private Object2DTorus space;
 	private OpenSequenceGraph plot;
+	private OpenSequenceGraph plot2;
 	private double energyLossPerTick;
 
 	private enum MyBoolean { Yes , No };
@@ -71,7 +72,13 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		if(plot != null) plot.dispose();
 		plot = new OpenSequenceGraph("Energy Evolution Curves", this);
 		plot.setAxisTitles("time", "energy");
+		//TODO: desenhar o gráficos
+		//plot.addSequence("Título",  new Sequence(){
 		//
+		// Do something
+		//
+		// });
+		plot.display();
 	}
 
 	protected void launchJADE() {
