@@ -1,5 +1,6 @@
 import jade.core.Profile;
 import jade.core.ProfileImpl;
+import jade.wrapper.StaleProxyException;
 import sajas.core.Runtime;
 import sajas.wrapper.ContainerController;
 
@@ -8,6 +9,7 @@ import sajas.sim.repast3.Repast3Launcher;
 import uchicago.src.reflector.ListPropertyDescriptor;
 import uchicago.src.sim.analysis.OpenSequenceGraph;
 import uchicago.src.sim.analysis.Sequence;
+import uchicago.src.sim.engine.Schedule;
 import uchicago.src.sim.engine.SimInit;
 import uchicago.src.sim.gui.DisplaySurface;
 import uchicago.src.sim.gui.Object2DDisplay;
@@ -19,7 +21,9 @@ import java.util.Vector;
 
 public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	private ContainerController mainContainer;
+	private Schedule schedule;
 	private int numberOfAgents, spaceSize;
+	private ArrayList<ArrayList<Object>> ambient;
 	private ArrayList<Sensor> agentList;
 	private DisplaySurface dsurf;
 	private Object2DTorus space;
@@ -27,7 +31,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	private OpenSequenceGraph plot2;
 	private double energyLossPerTick;
 
-	private enum MyBoolean { Yes , No };
+	private enum MyBoolean { Yes , No }
 	private MyBoolean allowGroupsFormation, nearAgents;
 
 	public EnergyEfficiencySensorsModel() {
@@ -38,9 +42,23 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		this.energyLossPerTick = 0.5;
 	}
 
+	public double getAgentsEnergy() {
+		double agentsEnergy = 0;
+
+		for (Sensor anAgentList : agentList) {
+			agentsEnergy += anAgentList.getEnergy();
+		}
+
+		return agentsEnergy;
+	}
+
 	@Override
 	public void setup() {
 		super.setup();
+
+		if (dsurf != null) dsurf.dispose();
+		dsurf = new DisplaySurface(this, "River Display");
+		registerDisplaySurface("River Display", dsurf);
 
 		//property descriptor
 		Vector<MyBoolean> mb = new Vector<MyBoolean>();
@@ -56,11 +74,12 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	public void begin(){
 		super.begin();
 		buildDisplay();
+		buildSchedule();
 	}
 
 	@Override
 	public String[] getInitParam() {
-		return new String[] { "numberOfAgents", "energyLossPerTick",  "allowGroupsFormation", "nearAgents" } ;
+		return new String[] { "numberOfAgents", "energyLossPerTick",  "allowGroupsFormation", "nearAgents", "spaceSize" } ;
 	}
 
 	@Override
@@ -71,7 +90,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	public void buildDisplay() {
 		//display and surface
 		Object2DDisplay display = new Object2DDisplay(space);
-		display.setObjectList(agentList);
+		display.setObjectList(this.agentList);
 		dsurf.addDisplayableProbeable(display, "River");
 		dsurf.display();
 
@@ -79,27 +98,26 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		if(plot != null) plot.dispose();
 		plot = new OpenSequenceGraph("Energy Evolution Curves", this);
 		plot.setAxisTitles("time", "energy");
-		//TODO: desenhar o gráficos
-		//plot.addSequence("Título",  new Sequence(){
-		//
-		// Do something
-		//
-		// });
+		plot.setYRange(0, 100);
+		//desenha a linha
+		plot.addSequence("Total Agents' Energy",  new Sequence(){
+			public double getSValue() {
+				return getAgentsEnergy();
+			}
+		});
 		plot.display();
+	}
 
-		if (plot2 != null) plot2.dispose();
-		plot2 = new OpenSequenceGraph("Groups and Agents Evolution Curves", this);
-		plot2.setAxisTitles("time", "n");
-		//TODO: desenhar o gráficos
-		plot.addSequence("Numero de agentes ativos",  new Sequence(){
-			public double getSValue(){ return getActiveAgents();}
-		 });
+	private void buildSchedule() {
+		this.schedule = getSchedule();
+		schedule.scheduleActionAtInterval(1, dsurf, "updateDisplay", Schedule.LAST);
+		schedule.scheduleActionAtInterval(1, plot, "step", Schedule.LAST);
 	}
 
 	private int getActiveAgents() {
 		int sum = 0;
-		for (int i = 0; i < agentList.size(); i++){
-			if (agentList.get(i).isActive())
+		for (Sensor anAgentList : agentList) {
+			if (anAgentList.isActive())
 				sum++;
 		}
 		return sum;
@@ -115,11 +133,15 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		dsurf = new DisplaySurface(this, "River Display");
 		registerDisplaySurface("River Display", dsurf);
 
-		launchAgents();
+		try {
+			launchAgents();
+		} catch (StaleProxyException e) {
+			e.printStackTrace();
+		}
 	}
 	
-	private void launchAgents() {
-		agentList = new ArrayList<>();
+	private void launchAgents() throws StaleProxyException {
+		agentList = new ArrayList<Sensor>();
 		space = new Object2DTorus(spaceSize, spaceSize);
 		for (int i = 0; i < numberOfAgents; i++) {
 			int x, y;
@@ -128,9 +150,11 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 				y = Random.uniform.nextIntFromTo(0, space.getSizeY() - 1);
 			} while (space.getObjectAt(x, y) != null);
 
-			Sensor agent = new Sensor(i, x, y, space);
+			Sensor agent = new Sensor(i, x, y, space, energyLossPerTick);
+			System.out.println("Sensor "+i+" - Coords("+x+", "+y+")");
 			space.putObjectAt(x, y, agent);
 			agentList.add(agent);
+			mainContainer.acceptNewAgent("Sensor "+i, agent).start();
 		}
 	}
 
