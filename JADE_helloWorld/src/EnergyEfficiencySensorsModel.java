@@ -1,11 +1,10 @@
 import jade.core.Profile;
 import jade.core.ProfileImpl;
+import jade.lang.acl.ACLMessage;
 import jade.wrapper.StaleProxyException;
 import sajas.core.Runtime;
 import sajas.wrapper.ContainerController;
-
 import sajas.sim.repast3.Repast3Launcher;
-
 import uchicago.src.reflector.ListPropertyDescriptor;
 import uchicago.src.sim.analysis.OpenSequenceGraph;
 import uchicago.src.sim.analysis.Sequence;
@@ -30,7 +29,8 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	private OpenSequenceGraph plot;
 	private OpenSequenceGraph plot2;
 	private double energyLossPerTick;
-
+	private String t1AgentName = null;
+	
 	private enum MyBoolean { Yes , No }
 	private MyBoolean allowGroupsFormation, nearAgents;
 
@@ -138,6 +138,29 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		} catch (StaleProxyException e) {
 			e.printStackTrace();
 		}
+		
+		
+		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+		msg.setContent("Hello dear agent.");
+
+		t1AgentName = "agent1";
+
+		try {
+			//System.out.println(EnergyEfficiencySensorsModel.class.getProtectionDomain().getCodeSource().getLocation().getPath()+);
+			//t1 = mainContainer.createNewAgent(t1AgentName, "sensor.Sensor", new Object[] {1,2,3,4});
+			space = new Object2DTorus(spaceSize, spaceSize);
+			Sensor tum = new Sensor(10,10,10, space, energyLossPerTick);
+			mainContainer.acceptNewAgent(t1AgentName, tum);
+			tum.start();
+
+		} catch (Exception any) {
+			any.printStackTrace();
+		}
+
+		msg.addReceiver(new sajas.core.AID(t1AgentName, sajas.core.AID.ISLOCALNAME));
+
+		agentList.get(0).send(msg);
+		
 	}
 	
 	private void launchAgents() throws StaleProxyException {
@@ -164,7 +187,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		boolean BATCH_MODE = false;
+		boolean BATCH_MODE = true;
 		SimInit init = new SimInit();
 		init.setNumRuns(1);   // works only in batch mode
 		init.loadModel(new EnergyEfficiencySensorsModel(), null, BATCH_MODE);

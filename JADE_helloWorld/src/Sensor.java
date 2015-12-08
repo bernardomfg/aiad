@@ -1,7 +1,12 @@
+
+
+import sajas.core.AID;
 import sajas.core.behaviours.CyclicBehaviour;
 import uchicago.src.sim.gui.Drawable;
 import uchicago.src.sim.gui.SimGraphics;
 import uchicago.src.sim.space.Object2DTorus;
+import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 
 import java.awt.*;
 
@@ -38,28 +43,37 @@ public class Sensor extends sajas.core.Agent implements Drawable {
     }
 
     protected void setup() {
-        System.out.println("Sensor " + personal_id + " started.");
+    	
+    	//receiver behaviour
+    	this.addBehaviour( new sajas.core.behaviours.CyclicBehaviour(){
 
-        addBehaviour(new CyclicBehaviour(this) {
+			@Override
+			public void action() {
+				
+				ACLMessage msg = receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
+				if (msg != null) {
+					System.out.println(msg.getContent());
+				}
+				else {
+					// if no message is arrived, block the behaviour
+					block();
+				}
+				
+			}
+    		
+    	});
+    	
+    }
+    
+    public void sendMessage(String t1AgentName){
+    	ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+		msg.setContent("Hello agent blabla!");
 
-            private static final long serialVersionUID = 1L;
+		msg.addReceiver(new AID(t1AgentName, AID.ISLOCALNAME));
 
-            @Override
-            public void action() {
-                if(energy - energyLossPerTick >= 0)
-                    energy -= energyLossPerTick;
-                else
-                    energy = 0;
-
-                System.out.println("   Sensor "+personal_id+ " energy: " + energy);
-
-                //sampleEnvironment();
-            }
-
-        });
-
-
-        System.out.println("Sensor " + personal_id + " ended.");
+		send(msg);
+		System.out.println("enviada");
+		System.out.println(getLocalName()+" SENT GREETINGS MESSAGE  TO "+t1AgentName); 
     }
 
     public void draw(SimGraphics g) {
