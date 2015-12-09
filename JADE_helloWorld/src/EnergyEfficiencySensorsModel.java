@@ -12,6 +12,7 @@ import uchicago.src.sim.engine.Schedule;
 import uchicago.src.sim.engine.SimInit;
 import uchicago.src.sim.gui.DisplaySurface;
 import uchicago.src.sim.gui.Object2DDisplay;
+import uchicago.src.sim.space.Object2DGrid;
 import uchicago.src.sim.space.Object2DTorus;
 import uchicago.src.sim.util.Random;
 
@@ -21,13 +22,11 @@ import java.util.Vector;
 public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	private ContainerController mainContainer;
 	private Schedule schedule;
-	private int numberOfAgents, spaceSize;
-	private ArrayList<ArrayList<Object>> ambient;
-	private ArrayList<Sensor> agentList;
+	private int numberOfAgents, spaceSizeX, spaceSizeY;
+	private ArrayList<Object> objectList;
 	private DisplaySurface dsurf;
-	private Object2DTorus space;
+	private Object2DGrid space;
 	private OpenSequenceGraph plot;
-	private OpenSequenceGraph plot2;
 	private double energyLossPerTick;
 	private String t1AgentName = null;
 	
@@ -35,18 +34,21 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	private MyBoolean allowGroupsFormation, nearAgents;
 
 	public EnergyEfficiencySensorsModel() {
-		this.numberOfAgents = 100;
-		this.spaceSize = 100;
+		this.numberOfAgents = 20;
+		this.spaceSizeX = 300;
+		this.spaceSizeY = 20;
 		this.allowGroupsFormation = MyBoolean.No;
 		this.nearAgents = MyBoolean.No;
-		this.energyLossPerTick = 0.5;
+		this.energyLossPerTick = 0.01;
 	}
 
 	public double getAgentsEnergy() {
 		double agentsEnergy = 0;
 
-		for (Sensor anAgentList : agentList) {
-			agentsEnergy += anAgentList.getEnergy();
+		for (Object obj : objectList) {
+			if(obj.getClass().equals("Sensor")) {
+				agentsEnergy += (Sensor) obj.getEnergy();
+			}
 		}
 
 		return agentsEnergy;
@@ -55,10 +57,6 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	@Override
 	public void setup() {
 		super.setup();
-
-		if (dsurf != null) dsurf.dispose();
-		dsurf = new DisplaySurface(this, "River Display");
-		registerDisplaySurface("River Display", dsurf);
 
 		//property descriptor
 		Vector<MyBoolean> mb = new Vector<MyBoolean>();
@@ -79,7 +77,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 
 	@Override
 	public String[] getInitParam() {
-		return new String[] { "numberOfAgents", "energyLossPerTick",  "allowGroupsFormation", "nearAgents", "spaceSize" } ;
+		return new String[] { "numberOfAgents", "energyLossPerTick",  "allowGroupsFormation", "nearAgents", "spaceSizeX", "spaceSizeY" } ;
 	}
 
 	@Override
@@ -89,9 +87,15 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 
 	public void buildDisplay() {
 		//display and surface
+		if (dsurf != null) dsurf.dispose();
+		dsurf = new DisplaySurface(this, "River Display");
+		dsurf.setSize(spaceSizeX, spaceSizeY);
+		registerDisplaySurface("River Display", dsurf);
+
 		Object2DDisplay display = new Object2DDisplay(space);
 		display.setObjectList(this.agentList);
-		dsurf.addDisplayableProbeable(display, "River");
+		dsurf.addDisplayableProbeable(display, "Sensors");
+
 		dsurf.display();
 
 		//graph
@@ -106,6 +110,19 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 			}
 		});
 		plot.display();
+	}
+
+	private void insertWaterElements() {
+		this.waterObjects = new ArrayList<Water>();
+
+		for(int i = 0; i < spaceSizeX; i++) {
+			for(int j = 0; j < spaceSizeY; j++) {
+				Water water = new Water(i, j, 0);
+				waterObjects.add(water);
+
+				space.putObjectAt(i, j, water);
+			}
+		}
 	}
 
 	private void buildSchedule() {
@@ -131,6 +148,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		if (dsurf != null)
 			dsurf.dispose();
 		dsurf = new DisplaySurface(this, "River Display");
+		dsurf.setSize(spaceSizeX, spaceSizeY);
 		registerDisplaySurface("River Display", dsurf);
 
 		try {
@@ -138,8 +156,9 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		} catch (StaleProxyException e) {
 			e.printStackTrace();
 		}
-		
-		
+	}
+
+	public void communicationTest() {
 		ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 		msg.setContent("Hello dear agent.");
 
@@ -148,7 +167,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		try {
 			//System.out.println(EnergyEfficiencySensorsModel.class.getProtectionDomain().getCodeSource().getLocation().getPath()+);
 			//t1 = mainContainer.createNewAgent(t1AgentName, "sensor.Sensor", new Object[] {1,2,3,4});
-			space = new Object2DTorus(spaceSize, spaceSize);
+			space = new Object2DTorus(spaceSizeX, spaceSizeY);
 			Sensor tum = new Sensor(10,10,10, space, energyLossPerTick);
 			mainContainer.acceptNewAgent(t1AgentName, tum);
 			tum.start();
@@ -160,12 +179,11 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		msg.addReceiver(new sajas.core.AID(t1AgentName, sajas.core.AID.ISLOCALNAME));
 
 		agentList.get(0).send(msg);
-		
 	}
-	
+
 	private void launchAgents() throws StaleProxyException {
 		agentList = new ArrayList<Sensor>();
-		space = new Object2DTorus(spaceSize, spaceSize);
+		space = new Object2DTorus(spaceSizeX, spaceSizeY);
 		for (int i = 0; i < numberOfAgents; i++) {
 			int x, y;
 			do {
@@ -174,11 +192,12 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 			} while (space.getObjectAt(x, y) != null);
 
 			Sensor agent = new Sensor(i, x, y, space, energyLossPerTick);
-			System.out.println("Sensor "+i+" - Coords("+x+", "+y+")");
 			space.putObjectAt(x, y, agent);
 			agentList.add(agent);
 			mainContainer.acceptNewAgent("Sensor "+i, agent).start();
 		}
+
+		insertWaterElements();
 	}
 
 	
@@ -187,7 +206,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		boolean BATCH_MODE = true;
+		boolean BATCH_MODE = false;
 		SimInit init = new SimInit();
 		init.setNumRuns(1);   // works only in batch mode
 		init.loadModel(new EnergyEfficiencySensorsModel(), null, BATCH_MODE);
@@ -225,11 +244,19 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		this.energyLossPerTick = energyPerTick;
 	}
 
-	public int getSpaceSize() {
-		return spaceSize;
+	public int getSpaceSizeX() {
+		return spaceSizeX;
 	}
 
-	public void setSpaceSize(int spaceSize) {
-		this.spaceSize = spaceSize;
+	public void setSpaceSizeX(int spaceSizeX) {
+		this.spaceSizeX = spaceSizeX;
+	}
+
+	public int getSpaceSizeY() {
+		return spaceSizeY;
+	}
+
+	public void setSpaceSizeY(int spaceSizeY) {
+		this.spaceSizeY = spaceSizeY;
 	}
 }

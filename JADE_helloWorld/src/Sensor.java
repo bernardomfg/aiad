@@ -4,6 +4,7 @@ import sajas.core.AID;
 import sajas.core.behaviours.CyclicBehaviour;
 import uchicago.src.sim.gui.Drawable;
 import uchicago.src.sim.gui.SimGraphics;
+import uchicago.src.sim.space.Object2DGrid;
 import uchicago.src.sim.space.Object2DTorus;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
@@ -19,6 +20,7 @@ public class Sensor extends sajas.core.Agent implements Drawable {
     private int coordX, coordY;
     private boolean isLeader;
     private double energyLossPerTick;
+    private Color color;
 
     public boolean isActive() {
         return isActive;
@@ -29,15 +31,16 @@ public class Sensor extends sajas.core.Agent implements Drawable {
     }
 
     private boolean isActive;
-    private Object2DTorus space;
+    private Object2DGrid space;
 
-    public Sensor(int personal_id, int coordX, int coordY, Object2DTorus space, double energyLossPerTick) {
+    public Sensor(int personal_id, int coordX, int coordY, Object2DGrid space, double energyLossPerTick) {
         this.personal_id = personal_id;
         this.coordX = coordX;
         this.coordY = coordY;
         this.space = space;
         this.isLeader = true;
         this.energy = 100;
+        this.color = Color.green;
         this.energyLossPerTick = energyLossPerTick;
         isActive = false;
     }
@@ -49,7 +52,14 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 
 			@Override
 			public void action() {
-				
+
+                // energy loss test
+                if(energy - energyLossPerTick >= 0)
+                    energy -= energyLossPerTick;
+                else
+                    energy = 0;
+
+                //communication
 				ACLMessage msg = receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
 				if (msg != null) {
 					System.out.println(msg.getContent());
@@ -77,7 +87,7 @@ public class Sensor extends sajas.core.Agent implements Drawable {
     }
 
     public void draw(SimGraphics g) {
-        g.drawFastCircle(Color.black);
+        g.drawFastRect(this.color);
     }
 
     @Override
