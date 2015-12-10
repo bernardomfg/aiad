@@ -18,7 +18,6 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 	private double energyLossPerTick;
 	private Vector<Sensor> neighbours = null;
 	private ArrayList<AID> group;
-	private Water water;
 	private String description;
 	private Color color;
 	
@@ -33,7 +32,7 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 	private boolean isActive;
 	private Object2DTorus space;
 
-	public Sensor(int x, int y, String description, Object2DTorus space, double energyLossPerTick, Water water) {
+	public Sensor(int x, int y, String description, Object2DTorus space, double energyLossPerTick) {
 		this.x = x;
 		this.y = y;
 		this.space = space;
@@ -42,7 +41,6 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 		this.color = Color.green;
 		this.energyLossPerTick = energyLossPerTick;
 		isActive = false;
-		this.water = water;
 		this.description = description;
 	}
 
@@ -64,8 +62,8 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 					System.out.println(description + " energy: " + energy);
 
 					//sampleEnvironment();
-					float polution = water.getPollutionLvl(x, y);
-
+					//float polution = water.getPollutionLvl(x, y);
+					float polution = 0;
 					//tomar decisoes acerca da rede
 
 					//inform neighbours
