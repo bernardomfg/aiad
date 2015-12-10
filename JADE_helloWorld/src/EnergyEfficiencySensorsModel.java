@@ -185,7 +185,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 				y = Random.uniform.nextIntFromTo(0, space.getSizeY() - 1);
 			} while (space.getObjectAt(x, y) != null);
 
-			Sensor agent = new Sensor(x, y, space, energyLossPerTick, water);
+			Sensor agent = new Sensor(x, y, "Sensor" +i, space, energyLossPerTick, water);
 
 			space.putObjectAt(x, y, agent);
 			agentList.add(agent);
