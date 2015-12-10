@@ -3,29 +3,26 @@ import uchicago.src.sim.gui.SimGraphics;
 
 import java.awt.*;
 
-/**
- * Created by mario on 05/12/2015.
- */
 public class Water implements Drawable{
 
-    float pollutionLvl;
-    int x, y;
+    private float pollutionLvl;
     private Color color;
-
-
-    Water(int x, int y, float polLvl) {
+    private int x, y;
+    private EnergyEfficiencySensorsModel model;
+    
+    Water(int x, int y, float polLvl, EnergyEfficiencySensorsModel model) {
         this.x = x;
         this.y = y;
-        this.color = Color.blue;
-        this.pollutionLvl = polLvl;
+    	this.pollutionLvl = polLvl;
+        this.model = model;
     }
 
-    public float getPollutionLvl() {
+    public float getPollutionLvl(int x, int y) {
+    	double currentTick = model.getTickCount();
+    	
+    	//inventar a formula para a poluiçao aqui (tem de usar o x, y e currentTick)
+    	
         return pollutionLvl;
-    }
-
-    public void setPollutionLvl(float pollutionLvl) {
-        this.pollutionLvl = pollutionLvl;
     }
 
     @Override
@@ -33,13 +30,16 @@ public class Water implements Drawable{
         g.drawFastRect(this.color);
     }
 
-    @Override
-    public int getX() {
-        return x;
-    }
+	@Override
+	public int getX() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 
-    @Override
-    public int getY() {
-        return y;
-    }
+	@Override
+	public int getY() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }
