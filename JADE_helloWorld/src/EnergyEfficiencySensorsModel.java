@@ -25,7 +25,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	private Object2DTorus space;
 	private OpenSequenceGraph plot;
 	private double energyLossPerTick;
-	private ArrayList<Sensor> agentsList; // description ex: "Sensor1", "Sensor2"...
+	private ArrayList<Sensor> agentsList;
 	private ArrayList<Water> watersList;
 	private float newPolLvl;
 
@@ -180,6 +180,8 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 
 		dsurf.setSize(spaceSizeX, spaceSizeY);
 
+		Sensor.usingCOSA = true;
+		
 		try {
 			launchAgents();
 		} catch (StaleProxyException e) {
@@ -188,10 +190,42 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	}
 
 	private void settingNeighbours() {
+
+		//range X: +/- 50
+		//range Y: +/- 4
+
 		for( Sensor sensor: this.agentsList ){
-			Vector<Sensor> neighbours = space.getMooreNeighbors(sensor.getX(), sensor.getY(), false);
-			sensor.setNeighbours(neighbours);
+			ArrayList<Sensor> sensorNeighs = new ArrayList<Sensor>();
+			ArrayList<Water> waterNeighs = new ArrayList<Water>();
+
+			int maxX = sensor.getX() +50, maxY = sensor.getY() +4, minX = sensor.getX() -50, minY = sensor.getY() -4;
+
+			maxX = ( (maxX > space.getSizeX()) ? space.getSizeX() : maxX );
+			maxY = ( (maxY > space.getSizeY()) ? space.getSizeY() : maxY );
+			minX = ( (minX < 0) ? 0 : minX );
+			minY = ( (minY < 0) ? 0 : minY );
+
+			for( int i = 0; i < this.agentsList.size(); i++){
+				Sensor temp = agentsList.get(i);
+				
+				if( temp.getDescription().equals(sensor.getDescription()) ) continue;
+				if(temp.getX()>=minX && temp.getX()<maxX && temp.getY()>=minY && temp.getY()<maxY){
+					sensorNeighs.add( temp );
+				}
+			}
+
+			for( int i = 0; i < this.watersList.size(); i++){
+				Water temp = watersList.get(i);
+				
+				if(temp.getX()>=minX && temp.getX()<maxX && temp.getY()>=minY && temp.getY()<maxY){
+					waterNeighs.add( temp );
+				}
+			}
+			
+			sensor.setSensorNeighbours(sensorNeighs);
+			sensor.setWaterNeighbours(waterNeighs);
 		}
+
 	}
 
 	private void createWaterElements() {
@@ -207,6 +241,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	}
 
 	private void launchAgents() throws StaleProxyException {
+		
 		for (int i = 0; i < numberOfAgents; i++) {
 			int x, y;
 			do {
@@ -227,7 +262,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	}
 
 	public static void main(String[] args) {
-		boolean BATCH_MODE = false;
+		boolean BATCH_MODE = true;
 		SimInit init = new SimInit();
 		init.setNumRuns(1);   // works only in batch mode
 		init.loadModel(new EnergyEfficiencySensorsModel(), null, BATCH_MODE);
