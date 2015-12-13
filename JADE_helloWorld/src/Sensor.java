@@ -51,6 +51,8 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 				else{
 					energy = 0;
 					isActive = false;
+					this.myAgent.doDelete();
+					this.done();
 				}
 
 				if(energy < 30 && energy > 0)
@@ -83,12 +85,11 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 					if( Sensor.this.usingCOSA ){
 						if( Math.abs( lastPolutionAverage - polutionAverage ) > 1 || Sensor.this.energy <= 10) { //diferenca de poluicao consideravel
 
-							for(Sensor sensor: Sensor.this.sensorNeigh){
+							for(jade.core.AID sensor: Sensor.this.group){
 
 								ACLMessage msg = new ACLMessage(ACLMessage.CANCEL);
 								msg.setContent("break");
-								sajas.core.AID receiver = new sajas.core.AID(sensor.getDescription(), sajas.core.AID.ISLOCALNAME);
-								msg.addReceiver(receiver);
+								msg.addReceiver(sensor);
 								this.myAgent.send(msg);
 								//System.out.println("Message: " + msg.getContent() + " From: " + msg.getSender().toString() + " to: " + receiver.toString());
 
@@ -100,7 +101,9 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 
 							//inform neighbours
 							for(Sensor sensor: Sensor.this.sensorNeigh){
-
+								
+								if(group.contains(sensor.getAID())) continue;
+								
 								ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 								msg.setContent("inform " + Float.toString(polutionAverage));
 								sajas.core.AID receiver = new sajas.core.AID(sensor.getDescription(), sajas.core.AID.ISLOCALNAME);
@@ -115,10 +118,10 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 
 					updateEnergyValue();
 
-					if( Sensor.this.energy <= 0 ) { Sensor.this.doDelete(); }
+					//if( Sensor.this.energy <= 0 ) { Sensor.this.doDelete(); }
 				}
-			}
-		});
+			/*}
+			});
 
 
 		if( Sensor.this.usingCOSA ){
@@ -129,7 +132,7 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 				private static final long serialVersionUID = 2L;
 
 				@Override
-				public void action() {
+				public void action() {*/
 					if(isActive) {
 
 						//tratamento de mensagens recebidas
@@ -173,30 +176,29 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 							Sensor.this.group.remove(msgAgree.getSender());
 						}
 
-					}
-
-					ACLMessage msgCancel = receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
-
-					if ( msgCancel != null ){
-
-						//sair do grupo
-						Sensor.this.isActive = true;
-
-						ACLMessage reply = new ACLMessage(ACLMessage.AGREE);
-						reply.setContent("withdraw");
-						reply.addReceiver(msgCancel.getSender());
-						Sensor.this.send(reply);
-
-						//System.out.println("Message: " + msgCancel.getContent() + " From: " + reply.getSender().toString() + " to: " + msgCancel.getSender().toString());
-
+					} else {
+	
+						ACLMessage msgCancel = receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+	
+						if ( msgCancel != null ){
+	
+							//sair do grupo
+							Sensor.this.isActive = true;
+	
+							ACLMessage reply = new ACLMessage(ACLMessage.AGREE);
+							reply.setContent("withdraw");
+							reply.addReceiver(msgCancel.getSender());
+							Sensor.this.send(reply);
+	
+							//System.out.println("Message: " + msgCancel.getContent() + " From: " + reply.getSender().toString() + " to: " + msgCancel.getSender().toString());
+	
+						}
 					}
 
 				}
 			});
-		}else {
-
 		}
-	}
+
 
 
 	public void draw(SimGraphics g) {
