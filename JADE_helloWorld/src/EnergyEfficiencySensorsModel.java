@@ -4,6 +4,7 @@ import jade.wrapper.StaleProxyException;
 import sajas.core.Runtime;
 import sajas.wrapper.ContainerController;
 import sajas.sim.repast3.Repast3Launcher;
+import sun.management.resources.agent;
 import uchicago.src.reflector.ListPropertyDescriptor;
 import uchicago.src.sim.analysis.OpenSequenceGraph;
 import uchicago.src.sim.analysis.Sequence;
@@ -13,6 +14,8 @@ import uchicago.src.sim.gui.DisplaySurface;
 import uchicago.src.sim.gui.Object2DDisplay;
 import uchicago.src.sim.space.Object2DTorus;
 import uchicago.src.sim.util.Random;
+
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Vector;
 
@@ -23,36 +26,32 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	private int numberOfAgents, spaceSizeX, spaceSizeY;
 	private DisplaySurface dsurf;
 	private Object2DTorus space;
-	private OpenSequenceGraph plot;
+	private OpenSequenceGraph plot, plot2, plot3;
 	private double energyLossPerTick;
 	private ArrayList<Sensor> agentsList;
 	private ArrayList<Water> watersList;
 	private float newPolLvl;
+	private int pollutionWidth;
+	private ArrayList<Color> agentsColors;
 
 	private enum MyBoolean { Yes , No }
-	private MyBoolean allowGroupsFormation, nearAgents;
+	private MyBoolean cosa, showEachAgentEnergyGraph, showEachAgentActivityGraph, showOverallGraph;
 
 	public EnergyEfficiencySensorsModel() {
 		this.numberOfAgents = 100;
 		this.spaceSizeX = 300;
 		this.spaceSizeY = 20;
-		this.allowGroupsFormation = MyBoolean.No;
-		this.nearAgents = MyBoolean.No;
-		this.energyLossPerTick = 0.01;
+		this.cosa = MyBoolean.No;
+		this.showOverallGraph = MyBoolean.Yes;
+		this.showEachAgentActivityGraph = MyBoolean.No;
+		this.showEachAgentEnergyGraph = MyBoolean.No;
+		this.energyLossPerTick = 0.1;
 		this.agentsList = new ArrayList<Sensor>();
 		this.watersList = new ArrayList<Water>();
 		this.space = new Object2DTorus(spaceSizeX, spaceSizeY);
 		this.newPolLvl = 0;
-	}
-
-	public double getAgentsEnergy() {
-		double agentsEnergy = 0;
-
-		for (Sensor anAgentList : agentsList) {
-			agentsEnergy += anAgentList.getEnergy();
-		}
-
-		return agentsEnergy;
+		this.pollutionWidth = 6;
+		this.agentsColors  = new ArrayList<Color>();
 	}
 
 	@Override
@@ -65,8 +64,10 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 			mb.add(MyBoolean.values()[i]);
 		}
 
-		descriptors.put("AllowGroupsFormation", new ListPropertyDescriptor("MyBoolean", mb));
-		descriptors.put("NearAgents", new ListPropertyDescriptor("MyBoolean", mb));
+		descriptors.put("Cosa", new ListPropertyDescriptor("MyBoolean", mb));
+		descriptors.put("ShowOverallGraph", new ListPropertyDescriptor("MyBoolean", mb));
+		descriptors.put("ShowEachAgentActivityGraph", new ListPropertyDescriptor("MyBoolean", mb));
+		descriptors.put("ShowEachAgentEnergyGraph", new ListPropertyDescriptor("MyBoolean", mb));
 	}
 
 	@Override
@@ -78,12 +79,12 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 
 	@Override
 	public String[] getInitParam() {
-		return new String[] { "numberOfAgents", "energyLossPerTick",  "allowGroupsFormation" } ;
+		return new String[] { "numberOfAgents", "energyLossPerTick",  "cosa", "pollutionWidth", "showEachAgentEnergyGraph" , "showEachAgentActivityGraph", "showOverallGraph" } ;
 	}
 
 	@Override
 	public String getName() {
-		return "Energy efficiency in a multi-agent system";
+		return "";
 	}
 
 	public void buildDisplay() {
@@ -97,24 +98,124 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 
 		dsurf.display();
 
-		//graph
-		if(plot != null) plot.dispose();
-		plot = new OpenSequenceGraph("Energy Evolution Curves", this);
-		plot.setAxisTitles("time", "energy");
-		plot.setYRange(0, 100);
-		//desenha a linha
-		plot.addSequence("Total Agents' Energy",  new Sequence(){
-			public double getSValue() {
-				return getAgentsEnergy();
+		//graphs
+		makeGraphs();
+	}
+
+	private void makeGraphs() {
+		if(this.showOverallGraph == MyBoolean.Yes) {
+			//graph 1
+			if (plot != null) plot.dispose();
+			plot = new OpenSequenceGraph("Energy Evolution and Active Agents Curves", this);
+			plot.setAxisTitles("time", "percentage");
+			plot.setYRange(0, 100);
+			//Total energy of the agents
+			plot.addSequence("All Agents' Energy (percentage)", new Sequence() {
+				public double getSValue() {
+					return getAgentsEnergy();
+				}
+			}, Color.RED);
+			//Number of Active Agents (in percentage)
+			plot.addSequence("Active Agents (percentage)", new Sequence() {
+				public double getSValue() {
+					return getAgentsActive();
+				}
+			}, Color.BLUE);
+			plot.display();
+		}
+
+		//graph2
+		if(plot2 != null) plot2.dispose();
+		plot2 = new OpenSequenceGraph("Energy Per Agent", this);
+		plot2.setAxisTitles("time", "percentage");
+		plot2.setYRange(0, 100);
+		//Total energy of the agents
+		for (final Sensor agent :agentsList) {
+			plot2.addSequence(agent.getName(),  new Sequence(){
+				public double getSValue() {
+					return agent.getEnergy();
+				}
+			}, getColorNotUsed());
+		}
+		if(this.showEachAgentEnergyGraph == MyBoolean.Yes)
+			plot2.display();
+
+		if(this.showEachAgentActivityGraph == MyBoolean.Yes) {
+			//graph3
+			if (plot3 != null) plot3.dispose();
+			plot3 = new OpenSequenceGraph("Activity Per Agent", this);
+			plot3.setAxisTitles("time", "percentage");
+			plot3.setYRange(0, 1);
+			//Total energy of the agents
+			for (int i = 0; i < agentsList.size(); i++) {
+				final Sensor agent = agentsList.get(i);
+				plot3.addSequence(agent.getName(), new Sequence() {
+					public double getSValue() {
+						if (agent.isActive())
+							return 1;
+						else
+							return 0;
+					}
+				}, this.agentsColors.get(i));
 			}
-		});
-		plot.display();
+			plot3.display();
+		}
+	}
+
+	private Color getColorNotUsed() {
+		Color color;
+		do {
+			float r = Random.uniform.nextFloatFromTo(0, 1);
+			float g = Random.uniform.nextFloatFromTo(0, 1);
+			float b = Random.uniform.nextFloatFromTo(0, 1);
+			color = new Color(r, g, b);
+		}while (colorExists(color));
+
+		agentsColors.add(color);
+		return color;
+	}
+
+	private boolean colorExists(Color color) {
+		for (Color c : this.agentsColors) {
+			if(c == color)
+				return true;
+		}
+
+		return false;
+	}
+
+	public double getAgentsEnergy() {
+		double agentsEnergy = 0;
+		double totalEnergy = numberOfAgents * 100;
+
+		for (Sensor anAgentList : agentsList) {
+			agentsEnergy += anAgentList.getEnergy();
+		}
+
+		return (agentsEnergy * 100)/totalEnergy;
+	}
+
+	private double getAgentsActive() {
+		double agentsActive = 0;
+
+		for (Sensor anAgentList : agentsList) {
+			if(anAgentList.isActive())
+				agentsActive ++;
+		}
+
+		return (agentsActive * 100)/numberOfAgents;
 	}
 
 	private void buildSchedule() {
 		this.schedule = getSchedule();
 		schedule.scheduleActionAtInterval(1, dsurf, "updateDisplay", Schedule.LAST);
-		schedule.scheduleActionAtInterval(1, plot, "step", Schedule.LAST);
+		if(this.showOverallGraph == MyBoolean.Yes)
+			schedule.scheduleActionAtInterval(1, plot, "step", Schedule.LAST);
+		if(this.showEachAgentEnergyGraph == MyBoolean.Yes)
+			schedule.scheduleActionAtInterval(1, plot2, "step", Schedule.LAST);
+		if(this.showEachAgentActivityGraph == MyBoolean.Yes)
+			schedule.scheduleActionAtInterval(1, plot3, "step", Schedule.LAST);
+
 		getSchedule().scheduleActionBeginning(1, this, "updateWaterPollution");
 	}
 
@@ -135,10 +236,10 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 				x++;
 		}
 
-		if(x+6 <= space.getSizeX()-1) {
+		if(x+this.pollutionWidth <= space.getSizeX()-1) {
 			for (int y = 0; y < space.getSizeY(); y++) {
-				((Water) space.getObjectAt(x+6, y)).setPollutionLvl(this.newPolLvl);
-				((Water) space.getObjectAt(x+6, y)).updateWaterColor();
+				((Water) space.getObjectAt(x+this.pollutionWidth, y)).setPollutionLvl(this.newPolLvl);
+				((Water) space.getObjectAt(x+this.pollutionWidth, y)).updateWaterColor();
 			}
 		}
 		for (int y = 0; y < space.getSizeY(); y++) {
@@ -150,7 +251,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	private void newPollutionPulse() {
 		this.newPolLvl = (float)Random.uniform.nextDoubleFromTo(5.0, 100.0);
 
-		for(int x = 0; x < 7; x++) {
+		for(int x = 0; x <= this.pollutionWidth; x++) {
 			for (int y = 0; y < space.getSizeY(); y++) {
 				((Water) space.getObjectAt(x, y)).setPollutionLvl(newPolLvl);
 				((Water) space.getObjectAt(x, y)).updateWaterColor();
@@ -180,8 +281,6 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 
 		dsurf.setSize(spaceSizeX, spaceSizeY);
 
-		Sensor.usingCOSA = true;
-		
 		try {
 			launchAgents();
 		} catch (StaleProxyException e) {
@@ -205,20 +304,16 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 			minX = ( (minX < 0) ? 0 : minX );
 			minY = ( (minY < 0) ? 0 : minY );
 
-			for( int i = 0; i < this.agentsList.size(); i++){
-				Sensor temp = agentsList.get(i);
-				
-				if( temp.getDescription().equals(sensor.getDescription()) ) continue;
-				if(temp.getX()>=minX && temp.getX()<maxX && temp.getY()>=minY && temp.getY()<maxY){
-					sensorNeighs.add( temp );
+			for (Sensor temp : this.agentsList) {
+				if (temp.getDescription().equals(sensor.getDescription())) continue;
+				if (temp.getX() >= minX && temp.getX() < maxX && temp.getY() >= minY && temp.getY() < maxY) {
+					sensorNeighs.add(temp);
 				}
 			}
 
-			for( int i = 0; i < this.watersList.size(); i++){
-				Water temp = watersList.get(i);
-				
-				if(temp.getX()>=minX && temp.getX()<maxX && temp.getY()>=minY && temp.getY()<maxY){
-					waterNeighs.add( temp );
+			for (Water temp : this.watersList) {
+				if (temp.getX() >= minX && temp.getX() < maxX && temp.getY() >= minY && temp.getY() < maxY) {
+					waterNeighs.add(temp);
 				}
 			}
 			
@@ -249,7 +344,13 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 				y = Random.uniform.nextIntFromTo(0, space.getSizeY() - 1);
 			} while (space.getObjectAt(x, y) != null);
 
-			Sensor agent = new Sensor(x, y, "Sensor" +i, energyLossPerTick);
+			String name = "Sensor_" +i;
+			Sensor agent;
+			if(this.cosa == MyBoolean.Yes) {
+				agent = new Sensor(x, y, name, energyLossPerTick, true);
+			}else {
+				agent = new Sensor(x, y, name, energyLossPerTick, false);
+			}
 			agentsList.add(agent);
 
 			mainContainer.acceptNewAgent(agent.getDescription(), agent).start();
@@ -262,7 +363,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	}
 
 	public static void main(String[] args) {
-		boolean BATCH_MODE = true;
+		boolean BATCH_MODE = false;
 		SimInit init = new SimInit();
 		init.setNumRuns(1);   // works only in batch mode
 		init.loadModel(new EnergyEfficiencySensorsModel(), null, BATCH_MODE);
@@ -284,20 +385,12 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		this.energyLossPerTick = energyLossPerTick;
 	}
 
-	public MyBoolean getAllowGroupsFormation() {
-		return allowGroupsFormation;
+	public MyBoolean getCosa() {
+		return cosa;
 	}
 
-	public void setAllowGroupsFormation(MyBoolean allowGroupsFormation) {
-		this.allowGroupsFormation = allowGroupsFormation;
-	}
-
-	public MyBoolean getNearAgents() {
-		return nearAgents;
-	}
-
-	public void setNearAgents(MyBoolean nearAgents) {
-		this.nearAgents = nearAgents;
+	public void setCosa(MyBoolean cosa) {
+		this.cosa = cosa;
 	}
 
 	public int getSpaceSizeY() {
@@ -316,4 +409,35 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		this.spaceSizeX = spaceSizeX;
 	}
 
+	public MyBoolean getShowEachAgentActivityGraph() {
+		return showEachAgentActivityGraph;
+	}
+
+	public void setShowEachAgentActivityGraph(MyBoolean showEachAgentActivityGraph) {
+		this.showEachAgentActivityGraph = showEachAgentActivityGraph;
+	}
+
+	public MyBoolean getShowEachAgentEnergyGraph() {
+		return showEachAgentEnergyGraph;
+	}
+
+	public void setShowEachAgentEnergyGraph(MyBoolean showEachAgentEnergyGraph) {
+		this.showEachAgentEnergyGraph = showEachAgentEnergyGraph;
+	}
+
+	public MyBoolean getShowOverallGraph() {
+		return showOverallGraph;
+	}
+
+	public void setShowOverallGraph(MyBoolean showOverallGraph) {
+		this.showOverallGraph = showOverallGraph;
+	}
+
+	public int getPollutionWidth() {
+		return pollutionWidth;
+	}
+
+	public void setPollutionWidth(int pollutionWidth) {
+		this.pollutionWidth = pollutionWidth;
+	}
 }

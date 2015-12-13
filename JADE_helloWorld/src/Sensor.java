@@ -21,19 +21,20 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 	private ArrayList<Water> waterNeigh;
 	private float polutionAverage;
 	private float lastPolutionAverage;
-	public static boolean usingCOSA;
+	private boolean usingCOSA;
 
-	public Sensor(int x, int y, String description, double energyLossPerTick) {
+	public Sensor(int x, int y, String description, double energyLossPerTick, boolean cosa) {
 		this.x = x;
 		this.y = y;
 		this.group = new ArrayList<jade.core.AID>();
 		this.energy = 100;
 		this.color = Color.decode("#1a7002");
 		this.energyLossPerTick = energyLossPerTick;
-		isActive = true;
+		this.isActive = true;
 		this.description = description;
 		this.lastPolutionAverage = 0;
-		polutionAverage = 0;
+		this.polutionAverage = 0;
+		this.usingCOSA = cosa;
 	}
 
 	protected void setup() {
@@ -47,6 +48,7 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 					energy -= energyLossPerTick;
 				else{
 					energy = 0;
+					isActive = false;
 					color = Color.red;
 				}
 
@@ -56,8 +58,6 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 			@Override
 			public void action() {
 				if(isActive) {
-					updateEnergyValue();
-
 					//sampleEnvironment();
 					float total = 0;
 					for(Water water: Sensor.this.waterNeigh){
@@ -67,7 +67,7 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 					polutionAverage = total/waterNeigh.size();
 
 					if( Sensor.this.usingCOSA ){
-						if( Math.abs( lastPolutionAverage - polutionAverage ) > 1 || Sensor.this.energy <= 0) { //diferença da poluiçao consideravel
+						if( Math.abs( lastPolutionAverage - polutionAverage ) > 1 || Sensor.this.energy <= 0) { //diferenca de poluicao consideravel
 
 							for(Sensor sensor: Sensor.this.sensorNeigh){
 
@@ -76,7 +76,7 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 								sajas.core.AID receiver = new sajas.core.AID(sensor.getDescription(), sajas.core.AID.ISLOCALNAME);
 								msg.addReceiver(receiver);
 								this.myAgent.send(msg);
-								System.out.println("Message: " + msg.getContent() + " From: " + msg.getSender().toString() + " to: " + receiver.toString());
+								//System.out.println("Message: " + msg.getContent() + " From: " + msg.getSender().toString() + " to: " + receiver.toString());
 
 							}
 
@@ -92,12 +92,14 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 								sajas.core.AID receiver = new sajas.core.AID(sensor.getDescription(), sajas.core.AID.ISLOCALNAME);
 								msg.addReceiver(receiver);
 								this.myAgent.send(msg);
-								System.out.println("Message: " + msg.getContent() + " From: " + msg.getSender().toString() + " to: " + receiver.toString());
+								//System.out.println("Message: " + msg.getContent() + " From: " + msg.getSender().toString() + " to: " + receiver.toString());
 
 							}
 						}
 
 					}
+
+					updateEnergyValue();
 
 					if( Sensor.this.energy <= 0 ) { Sensor.this.doDelete(); }
 				}
@@ -132,7 +134,7 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 									reply.setContent("fermAdherence");
 									reply.addReceiver(msgInf.getSender());
 									Sensor.this.send(reply);
-									System.out.println("Message: " + msgInf.getContent() + " From: " + reply.getSender().toString() + " to: " + msgInf.getSender().toString());
+									//System.out.println("Message: " + msgInf.getContent() + " From: " + reply.getSender().toString() + " to: " + msgInf.getSender().toString());
 								}
 							}
 						}
@@ -144,7 +146,7 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 							reply.addReceiver(msgProp.getSender());
 							Sensor.this.send(reply);
 
-							System.out.println("Message: " + msgProp.getContent() + " From: " + reply.getSender().toString() + " to: " + msgProp.getSender().toString());						
+							//System.out.println("Message: " + msgProp.getContent() + " From: " + reply.getSender().toString() + " to: " + msgProp.getSender().toString());
 
 							Sensor.this.group.add(msgProp.getSender());
 						}
@@ -171,7 +173,7 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 						reply.addReceiver(msgCancel.getSender());
 						Sensor.this.send(reply);
 
-						System.out.println("Message: " + msgCancel.getContent() + " From: " + reply.getSender().toString() + " to: " + msgCancel.getSender().toString());						
+						//System.out.println("Message: " + msgCancel.getContent() + " From: " + reply.getSender().toString() + " to: " + msgCancel.getSender().toString());
 
 					}
 
