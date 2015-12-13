@@ -51,14 +51,14 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 				else{
 					energy = 0;
 					isActive = false;
-					this.myAgent.doDelete();
-					this.done();
 				}
 
 				if(energy < 30 && energy > 0)
 					color = Color.yellow;
-				else if(energy == 0)
+				else if(energy == 0){
 					color = Color.RED;
+					isActive = false;
+				}
 			}
 
 			public float getSample() {
@@ -83,7 +83,7 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 					this.myAgent.send(tower_msg);
 
 					if( Sensor.this.usingCOSA ){
-						if( Math.abs( lastPolutionAverage - polutionAverage ) > 1 || Sensor.this.energy <= 10) { //diferenca de poluicao consideravel
+						if( Math.abs( lastPolutionAverage - polutionAverage ) > 1 || Sensor.this.energy <= 3) { //diferenca de poluicao consideravel
 
 							for(jade.core.AID sensor: Sensor.this.group){
 
@@ -97,7 +97,7 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 
 						}
 
-						if( Sensor.this.energy > 0 ) {
+						if( Sensor.this.energy > 3 ) {
 
 							//inform neighbours
 							for(Sensor sensor: Sensor.this.sensorNeigh){
@@ -193,6 +193,12 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 							//System.out.println("Message: " + msgCancel.getContent() + " From: " + reply.getSender().toString() + " to: " + msgCancel.getSender().toString());
 	
 						}
+					}
+					
+
+					if(energy == 0){
+						isActive = false;
+						this.myAgent.doDelete();
 					}
 
 				}
