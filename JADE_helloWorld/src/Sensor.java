@@ -9,10 +9,11 @@ import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
 import java.awt.*;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Vector;
 
-public class Sensor extends sajas.core.Agent implements Drawable {
+public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 	private float energy; //percent value
 	private int x, y;
 	private double energyLossPerTick;
@@ -20,27 +21,16 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 	private ArrayList<AID> group;
 	private String description;
 	private Color color;
-	
-	public boolean isActive() {
-		return isActive;
-	}
-
-	public void setActive(boolean active) {
-		isActive = active;
-	}
-
 	private boolean isActive;
-	private Object2DTorus space;
 
-	public Sensor(int x, int y, String description, Object2DTorus space, double energyLossPerTick) {
+	public Sensor(int x, int y, String description, double energyLossPerTick) {
 		this.x = x;
 		this.y = y;
-		this.space = space;
 		this.group = new ArrayList<AID>();
 		this.energy = 100;
-		this.color = Color.green;
+		this.color = Color.decode("#1a7002");
 		this.energyLossPerTick = energyLossPerTick;
-		isActive = false;
+		isActive = true;
 		this.description = description;
 	}
 
@@ -51,15 +41,22 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 
 			private static final long serialVersionUID = 1L;
 
+			public void updateEnergyValue() {
+				if(energy - energyLossPerTick >= 0)
+					energy -= energyLossPerTick;
+				else{
+					energy = 0;
+					color = Color.red;
+				}
+
+				if(energy < 30 && energy > 0)
+					color = Color.yellow;
+			}
 			@Override
 			public void action() {
 				if(isActive) {
 
-					if(energy - energyLossPerTick >= 0)
-						energy -= energyLossPerTick;
-					else
-						energy = 0;
-					System.out.println(description + " energy: " + energy);
+					updateEnergyValue();
 
 					//sampleEnvironment();
 					//float polution = water.getPollutionLvl(x, y);
@@ -67,14 +64,14 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 					//tomar decisoes acerca da rede
 
 					//inform neighbours
-					for(Sensor sensor: neighbours){
+					/*for(Sensor sensor: neighbours){
 
 						ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
 						msg.setContent("inform " + polution);
 						msg.addReceiver(new sajas.core.AID(sensor.getDescription(), sajas.core.AID.ISLOCALNAME));
 						this.myAgent.send(msg);
 
-					}
+					}*/
 
 				}
 			}
@@ -99,7 +96,7 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 						if ( "inform".equalsIgnoreCase( mensagem[0] )){
 							System.out.println(msg.getContent());
 
-							if( true ){ //criterio de poluiçao permitida
+							if( true ){ //criterio de poluicao permitida
 								ACLMessage reply = new ACLMessage(ACLMessage.PROPOSE);
 								reply.setContent("fermAdherence");
 								reply.addReceiver(msg.getSender());
@@ -154,7 +151,7 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 	}
 
 	public void draw(SimGraphics g) {
-		g.drawFastCircle(Color.black);
+		g.drawFastCircle(this.color);
 	}
 
 	@Override
@@ -166,13 +163,6 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 	public int getY() {
 		return y;
 	}
-
-	/*
-			getEnvironmentSample();
-            updateEnvironmentModel();
-            updateNeighboursRelationships();
-            updateSocialNetwork();
-	 */
 	
 	public double getEnergy() {
 		return energy;
@@ -184,6 +174,14 @@ public class Sensor extends sajas.core.Agent implements Drawable {
 
 	public String getDescription() {
 		return description;
+	}
+
+	public boolean isActive() {
+		return isActive;
+	}
+
+	public void setActive(boolean active) {
+		isActive = active;
 	}
 
 }

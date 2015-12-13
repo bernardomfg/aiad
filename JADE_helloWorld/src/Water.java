@@ -8,38 +8,56 @@ public class Water implements Drawable{
     private float pollutionLvl;
     private Color color;
     private int x, y;
-    private EnergyEfficiencySensorsModel model;
     
-    Water(int x, int y, float polLvl, EnergyEfficiencySensorsModel model) {
+    Water(int x, int y, float polLvl) {
         this.x = x;
         this.y = y;
     	this.pollutionLvl = polLvl;
-        this.model = model;
+        this.color = Color.decode("#00bbff");
     }
 
-    public float getPollutionLvl(int x, int y) {
-    	double currentTick = model.getTickCount();
-    	
-    	//inventar a formula para a poluiçao aqui (tem de usar o x, y e currentTick)
-    	
-        return pollutionLvl;
+    public void updateWaterColor()
+    {
+        if (pollutionLvl > 80)
+            setColor(Color.decode("#565355"));
+        else if (pollutionLvl <= 80 && pollutionLvl > 30)
+            setColor(Color.decode("#7c7a7c"));
+        else if(pollutionLvl <= 30 && pollutionLvl > 0)
+            setColor(Color.decode("#afacaf"));
+        else
+            setColor(Color.decode("#00bbff"));
     }
 
     @Override
     public void draw(SimGraphics g) {
-        g.drawFastRect(this.color);
+        g.drawRect(this.color);
     }
 
 	@Override
 	public int getX() {
 		// TODO Auto-generated method stub
-		return 0;
+		return this.x;
 	}
 
 	@Override
 	public int getY() {
 		// TODO Auto-generated method stub
-		return 0;
+		return this.y;
 	}
 
+    public float getPollutionLvl() {
+        return pollutionLvl;
+    }
+
+    public Color getColor() {
+        return color;
+    }
+
+    public void setColor(Color color) {
+        this.color = color;
+    }
+
+    public void setPollutionLvl(float pollutionLvl) {
+        this.pollutionLvl = pollutionLvl;
+    }
 }
