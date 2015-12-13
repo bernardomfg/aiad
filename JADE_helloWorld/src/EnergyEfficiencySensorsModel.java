@@ -108,7 +108,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 			//graph 1
 			if (plot != null) plot.dispose();
 			plot = new OpenSequenceGraph("Energy Evolution and Active Agents Curves", this);
-			plot.setAxisTitles("time", "percentage");
+			plot.setAxisTitles("ticks", "percentage");
 			plot.setYRange(0, 100);
 			//Total energy of the agents
 			plot.addSequence("All Agents' Energy (percentage)", new Sequence() {
@@ -128,7 +128,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		//graph2
 		if(plot2 != null) plot2.dispose();
 		plot2 = new OpenSequenceGraph("Energy Per Agent", this);
-		plot2.setAxisTitles("time", "percentage");
+		plot2.setAxisTitles("ticks", "percentage");
 		plot2.setYRange(0, 100);
 		//Total energy of the agents
 		for (final Sensor agent :agentsList) {
@@ -145,7 +145,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 			//graph3
 			if (plot3 != null) plot3.dispose();
 			plot3 = new OpenSequenceGraph("Activity Per Agent", this);
-			plot3.setAxisTitles("time", "percentage");
+			plot3.setAxisTitles("ticks", "percentage");
 			plot3.setYRange(0, 1);
 			//Total energy of the agents
 			for (int i = 0; i < agentsList.size(); i++) {
@@ -224,7 +224,6 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		/* New pulse of pollution */
 		if(waterNotPolluted()) {
 			newPollutionPulse();
-			System.out.println("New pulse of pollution");
 		}
 
 		/* pollution flow */
