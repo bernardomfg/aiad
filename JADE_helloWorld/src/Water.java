@@ -19,11 +19,11 @@ public class Water implements Drawable{
     public void updateWaterColor()
     {
         if (pollutionLvl > 80)
-            setColor(Color.decode("#565355"));
-        else if (pollutionLvl <= 80 && pollutionLvl > 30)
             setColor(Color.decode("#7c7a7c"));
-        else if(pollutionLvl <= 30 && pollutionLvl > 0)
+        else if (pollutionLvl <= 80 && pollutionLvl > 30)
             setColor(Color.decode("#afacaf"));
+        else if(pollutionLvl <= 30 && pollutionLvl > 0)
+            setColor(Color.decode("#ceccce"));
         else
             setColor(Color.decode("#00bbff"));
     }

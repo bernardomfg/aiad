@@ -13,8 +13,6 @@ import uchicago.src.sim.gui.DisplaySurface;
 import uchicago.src.sim.gui.Object2DDisplay;
 import uchicago.src.sim.space.Object2DTorus;
 import uchicago.src.sim.util.Random;
-
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.Vector;
 
@@ -80,7 +78,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 
 	@Override
 	public String[] getInitParam() {
-		return new String[] { "numberOfAgents", "energyLossPerTick",  "allowGroupsFormation", "nearAgents", "spaceSizeX", "spaceSizeY" } ;
+		return new String[] { "numberOfAgents", "energyLossPerTick",  "allowGroupsFormation" } ;
 	}
 
 	@Override
