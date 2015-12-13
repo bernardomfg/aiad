@@ -1,41 +1,42 @@
 
 
-import sajas.core.AID;
 import sajas.core.behaviours.CyclicBehaviour;
 import uchicago.src.sim.gui.Drawable;
 import uchicago.src.sim.gui.SimGraphics;
-import uchicago.src.sim.space.Object2DTorus;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-
 import java.awt.*;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Vector;
 
 public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 	private float energy; //percent value
 	private int x, y;
 	private double energyLossPerTick;
-	private Vector<Sensor> neighbours = null;
-	private ArrayList<AID> group;
+	private ArrayList<jade.core.AID> group;
 	private String description;
 	private Color color;
 	private boolean isActive;
+	private ArrayList<Sensor> sensorNeigh;
+	private ArrayList<Water> waterNeigh;
+	private float polutionAverage;
+	private float lastPolutionAverage;
+	public static boolean usingCOSA;
 
 	public Sensor(int x, int y, String description, double energyLossPerTick) {
 		this.x = x;
 		this.y = y;
-		this.group = new ArrayList<AID>();
+		this.group = new ArrayList<jade.core.AID>();
 		this.energy = 100;
 		this.color = Color.decode("#1a7002");
 		this.energyLossPerTick = energyLossPerTick;
 		isActive = true;
 		this.description = description;
+		this.lastPolutionAverage = 0;
+		polutionAverage = 0;
 	}
 
 	protected void setup() {
-		System.out.println(description + " started.");
 
 		this.addBehaviour( new CyclicBehaviour(){
 
@@ -55,100 +56,130 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 			@Override
 			public void action() {
 				if(isActive) {
-
 					updateEnergyValue();
 
 					//sampleEnvironment();
-					//float polution = water.getPollutionLvl(x, y);
-					float polution = 0;
-					//tomar decisoes acerca da rede
+					float total = 0;
+					for(Water water: Sensor.this.waterNeigh){
+						total += water.getPollutionLvl();
+					}
+					lastPolutionAverage = polutionAverage;
+					polutionAverage = total/waterNeigh.size();
 
-					//inform neighbours
-					/*for(Sensor sensor: neighbours){
+					if( Sensor.this.usingCOSA ){
+						if( Math.abs( lastPolutionAverage - polutionAverage ) > 1 || Sensor.this.energy <= 0) { //diferença da poluiçao consideravel
 
-						ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-						msg.setContent("inform " + polution);
-						msg.addReceiver(new sajas.core.AID(sensor.getDescription(), sajas.core.AID.ISLOCALNAME));
-						this.myAgent.send(msg);
+							for(Sensor sensor: Sensor.this.sensorNeigh){
 
-					}*/
+								ACLMessage msg = new ACLMessage(ACLMessage.CANCEL);
+								msg.setContent("break");
+								sajas.core.AID receiver = new sajas.core.AID(sensor.getDescription(), sajas.core.AID.ISLOCALNAME);
+								msg.addReceiver(receiver);
+								this.myAgent.send(msg);
+								System.out.println("Message: " + msg.getContent() + " From: " + msg.getSender().toString() + " to: " + receiver.toString());
 
-				}
-			}
-		});
+							}
 
-		//receiver behaviour
-		this.addBehaviour( new CyclicBehaviour(){
+						}
 
-			private static final long serialVersionUID = 2L;
+						if( Sensor.this.energy > 0 ) {
 
-			@Override
-			public void action() {
-				if(isActive) {
+							//inform neighbours
+							for(Sensor sensor: Sensor.this.sensorNeigh){
 
-					//tratamento de mensagens recebidas
-					ACLMessage msg = receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
-					if (msg != null) {
+								ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+								msg.setContent("inform " + Float.toString(polutionAverage));
+								sajas.core.AID receiver = new sajas.core.AID(sensor.getDescription(), sajas.core.AID.ISLOCALNAME);
+								msg.addReceiver(receiver);
+								this.myAgent.send(msg);
+								System.out.println("Message: " + msg.getContent() + " From: " + msg.getSender().toString() + " to: " + receiver.toString());
 
-						AID agentID = (AID) msg.getSender();
-						String[] mensagem = msg.getContent().split(" ");
-
-						if ( "inform".equalsIgnoreCase( mensagem[0] )){
-							System.out.println(msg.getContent());
-
-							if( true ){ //criterio de poluicao permitida
-								ACLMessage reply = new ACLMessage(ACLMessage.PROPOSE);
-								reply.setContent("fermAdherence");
-								reply.addReceiver(msg.getSender());
-								Sensor.this.send(reply);
 							}
 						}
 
-						else if ( "fermAdherence".equalsIgnoreCase( mensagem[0] ) ){
-							System.out.println(msg.getContent());
-
-							ACLMessage reply = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
-							reply.setContent("ackAdherence");
-							reply.addReceiver(agentID);
-							Sensor.this.send(reply);
-							
-							Sensor.this.group.add(agentID);
-						}
-
-						else if ( "ackAdherence".equalsIgnoreCase( mensagem[0] ) ){
-							System.out.println(msg.getContent());
-
-							Sensor.this.isActive = false;
-						}
-
-						else if ( "break".equalsIgnoreCase( mensagem[0] ) ){
-							System.out.println(msg.getContent());
-							
-							//sair do grupo
-							Sensor.this.isActive = true;
-							
-							ACLMessage reply = new ACLMessage(ACLMessage.AGREE);
-							reply.setContent("withdraw");
-							reply.addReceiver(msg.getSender());
-							Sensor.this.send(reply);
-						}
-
-						else if ( "withdraw".equalsIgnoreCase( mensagem[0] ) ){
-							System.out.println(msg.getContent());
-							Sensor.this.group.remove(agentID);
-						}
-
-					}
-					else {
-						// if no message is arrived, block the behaviour
-						block();
 					}
 
+					if( Sensor.this.energy <= 0 ) { Sensor.this.doDelete(); }
 				}
 			}
 		});
 
+
+		if( Sensor.this.usingCOSA ){
+
+			//receiver behaviour
+			this.addBehaviour( new CyclicBehaviour(){
+
+				private static final long serialVersionUID = 2L;
+
+				@Override
+				public void action() {
+					if(isActive) {
+
+						//tratamento de mensagens recebidas
+						ACLMessage msgInf = receive(MessageTemplate.MatchPerformative(ACLMessage.INFORM));
+						ACLMessage msgProp = receive(MessageTemplate.MatchPerformative(ACLMessage.PROPOSE));
+						ACLMessage msgAccep = receive(MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL));
+						ACLMessage msgAgree = receive(MessageTemplate.MatchPerformative(ACLMessage.AGREE));
+
+						if (msgInf != null) {
+							String[] mensagem = msgInf.getContent().split(" ");
+
+							if ( "inform".equalsIgnoreCase( mensagem[0] )){
+
+								if( Float.parseFloat(mensagem[1]) > polutionAverage -3.0 && Float.parseFloat(mensagem[1]) < polutionAverage +3.0 ){ //criterio de poluicao permitida
+									ACLMessage reply = new ACLMessage(ACLMessage.PROPOSE);
+									reply.setContent("fermAdherence");
+									reply.addReceiver(msgInf.getSender());
+									Sensor.this.send(reply);
+									System.out.println("Message: " + msgInf.getContent() + " From: " + reply.getSender().toString() + " to: " + msgInf.getSender().toString());
+								}
+							}
+						}
+
+						if ( msgProp != null  ){
+
+							ACLMessage reply = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
+							reply.setContent("ackAdherence");
+							reply.addReceiver(msgProp.getSender());
+							Sensor.this.send(reply);
+
+							System.out.println("Message: " + msgProp.getContent() + " From: " + reply.getSender().toString() + " to: " + msgProp.getSender().toString());						
+
+							Sensor.this.group.add(msgProp.getSender());
+						}
+
+						if ( msgAccep != null  ){ //entrou num grupo
+							Sensor.this.isActive = false;
+						}
+
+						if ( msgAgree != null ){ //saiu do grupo
+							Sensor.this.group.remove(msgAgree.getSender());
+						}
+
+					}
+
+					ACLMessage msgCancel = receive(MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+
+					if ( msgCancel != null ){
+
+						//sair do grupo
+						Sensor.this.isActive = true;
+
+						ACLMessage reply = new ACLMessage(ACLMessage.AGREE);
+						reply.setContent("withdraw");
+						reply.addReceiver(msgCancel.getSender());
+						Sensor.this.send(reply);
+
+						System.out.println("Message: " + msgCancel.getContent() + " From: " + reply.getSender().toString() + " to: " + msgCancel.getSender().toString());						
+
+					}
+
+				}
+			});
+		}
 	}
+
 
 	public void draw(SimGraphics g) {
 		g.drawFastCircle(this.color);
@@ -163,13 +194,17 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 	public int getY() {
 		return y;
 	}
-	
+
 	public double getEnergy() {
 		return energy;
 	}
 
-	public void setNeighbours(Vector<Sensor> neighbours) {
-		this.neighbours = neighbours;
+	public void setSensorNeighbours(ArrayList<Sensor> sensorNeigh2) {
+		this.sensorNeigh = sensorNeigh2;
+	}
+
+	public void setWaterNeighbours(ArrayList<Water> water) {
+		this.waterNeigh = water;
 	}
 
 	public String getDescription() {
