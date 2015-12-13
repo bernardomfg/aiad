@@ -33,7 +33,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	private float newPolLvl;
 	private int pollutionWidth;
 	private ArrayList<Color> agentsColors;
-
+	private ControlTower tower;
 	private enum MyBoolean { Yes , No }
 	private MyBoolean cosa, showEachAgentEnergyGraph, showEachAgentActivityGraph, showOverallGraph;
 
@@ -52,6 +52,7 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 		this.newPolLvl = 0;
 		this.pollutionWidth = 6;
 		this.agentsColors  = new ArrayList<Color>();
+		this.tower = new ControlTower();
 	}
 
 	@Override
@@ -336,7 +337,8 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 	}
 
 	private void launchAgents() throws StaleProxyException {
-		
+		mainContainer.acceptNewAgent(tower.getDescription(), tower).start();
+
 		for (int i = 0; i < numberOfAgents; i++) {
 			int x, y;
 			do {
@@ -347,9 +349,9 @@ public class EnergyEfficiencySensorsModel extends Repast3Launcher {
 			String name = "Sensor_" +i;
 			Sensor agent;
 			if(this.cosa == MyBoolean.Yes) {
-				agent = new Sensor(x, y, name, energyLossPerTick, true);
+				agent = new Sensor(x, y, name, energyLossPerTick, true, tower);
 			}else {
-				agent = new Sensor(x, y, name, energyLossPerTick, false);
+				agent = new Sensor(x, y, name, energyLossPerTick, false, tower);
 			}
 			agentsList.add(agent);
 

@@ -22,8 +22,9 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 	private float polutionAverage;
 	private float lastPolutionAverage;
 	private boolean usingCOSA;
+	private ControlTower tower;
 
-	public Sensor(int x, int y, String description, double energyLossPerTick, boolean cosa) {
+	public Sensor(int x, int y, String description, double energyLossPerTick, boolean cosa, ControlTower tower) {
 		this.x = x;
 		this.y = y;
 		this.group = new ArrayList<jade.core.AID>();
@@ -35,6 +36,7 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 		this.lastPolutionAverage = 0;
 		this.polutionAverage = 0;
 		this.usingCOSA = cosa;
+		this.tower = tower;
 	}
 
 	protected void setup() {
@@ -55,19 +57,30 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 				if(energy < 30 && energy > 0)
 					color = Color.yellow;
 			}
+
+			public float getSample() {
+				//sampleEnvironment();
+				float total = 0;
+				for(Water water: waterNeigh){
+					total += water.getPollutionLvl();
+				}
+
+				return total/waterNeigh.size();
+			}
 			@Override
 			public void action() {
 				if(isActive) {
-					//sampleEnvironment();
-					float total = 0;
-					for(Water water: Sensor.this.waterNeigh){
-						total += water.getPollutionLvl();
-					}
 					lastPolutionAverage = polutionAverage;
-					polutionAverage = total/waterNeigh.size();
+					polutionAverage = getSample();
+
+					ACLMessage tower_msg = new ACLMessage(ACLMessage.INFORM);
+					tower_msg.setContent("inform " + polutionAverage);
+					sajas.core.AID receiver_t = new sajas.core.AID(tower.getDescription(), sajas.core.AID.ISLOCALNAME);
+					tower_msg.addReceiver(receiver_t);
+					this.myAgent.send(tower_msg);
 
 					if( Sensor.this.usingCOSA ){
-						if( Math.abs( lastPolutionAverage - polutionAverage ) > 1 || Sensor.this.energy <= 0) { //diferenca de poluicao consideravel
+						if( Math.abs( lastPolutionAverage - polutionAverage ) > 1 || Sensor.this.energy <= 10) { //diferenca de poluicao consideravel
 
 							for(Sensor sensor: Sensor.this.sensorNeigh){
 
@@ -179,6 +192,8 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 
 				}
 			});
+		}else {
+
 		}
 	}
 
