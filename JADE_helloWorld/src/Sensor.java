@@ -51,11 +51,12 @@ public class Sensor extends sajas.core.Agent implements Drawable, Serializable {
 				else{
 					energy = 0;
 					isActive = false;
-					color = Color.red;
 				}
 
 				if(energy < 30 && energy > 0)
 					color = Color.yellow;
+				else if(energy == 0)
+					color = Color.RED;
 			}
 
 			public float getSample() {
